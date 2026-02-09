@@ -14,6 +14,8 @@ use crate::{error::MPLXCoreError, state::CollectionAuthority};
 pub struct MintNft<'info> {
     #[account(mut)]
     pub minter: Signer<'info>,
+
+    //generating keypair for the asset. As its new , the data should be empty.
     #[account(mut, constraint = asset.data_is_empty() @ MPLXCoreError::AssetAlreadyInitialized)]
     pub asset: Signer<'info>,
     #[account(
@@ -21,7 +23,7 @@ pub struct MintNft<'info> {
         constraint = collection.owner == &CORE_PROGRAM_ID @ MPLXCoreError::InvalidCollection,
         constraint = !collection.data_is_empty() @ MPLXCoreError::CollectionNotInitialized
     )]
-    /// CHECK: This will also be checked by core
+    /// CHECK: This will also be checked by core , If i am not wrong its, owned by core also.
     pub collection: UncheckedAccount<'info>,
     #[account(
         seeds = [b"collection_authority", collection.key().as_ref()],

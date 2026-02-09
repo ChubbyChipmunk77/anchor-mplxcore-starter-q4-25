@@ -7,67 +7,49 @@ use mpl_core::{
 
 use crate::{error::MPLXCoreError, state::CollectionAuthority};
 
-// #[derive(Accounts)]
-// pub struct ThawNft<'info> {
-//    // TODO
-// }
-
-// impl<'info> ThawNft<'info> {
-//     pub fn thaw_nft(&mut self) -> Result<()> {
-//         // TODO
-
-//         Ok(())
-//     }
-// }
-
 #[derive(Accounts)]
 pub struct ThawNft<'info> {
-    // TODO
     #[account(mut)]
-    pub authority: Signer<'info>,
-    #[account(mut)]
-    /// CHECK: Verified by Metaplex Core CPI
-    pub asset: UncheckedAccount<'info>,
+    pub payer: Signer<'info>,
 
-    #[account(
-        mut,
+    //clearly shows that the owner of the collection is the metaplex core program, and this will be
+    //checked by core CPI as well. So we can be sure that the collection is valid.
+    #[account(mut,
         constraint = collection.owner == &CORE_PROGRAM_ID @ MPLXCoreError::InvalidCollection,
     )]
-    /// CHECK: Verified by Metaplex Core CPI
+    ///Will be checked by core CPI
     pub collection: UncheckedAccount<'info>,
-
     #[account(
         seeds = [b"collection_authority", collection.key().as_ref()],
         bump = collection_authority.bump,
-        constraint = collection_authority.creator == authority.key() @ MPLXCoreError::NotAuthorized,
+        constraint = collection_authority.creator == payer.key() @ MPLXCoreError::NotAuthorized,
     )]
     pub collection_authority: Account<'info, CollectionAuthority>,
-    #[account(address = CORE_PROGRAM_ID)]
-    /// CHECK: Metaplex Core program
-    pub core_program: UncheckedAccount<'info>,
+    ///The core will verify these accounts
+    #[account(mut)]
+    pub asset: UncheckedAccount<'info>,
 
+    #[account(address = CORE_PROGRAM_ID)]
+    pub core_program: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> ThawNft<'info> {
     pub fn thaw_nft(&mut self) -> Result<()> {
-        // TODO
-        let signer_seeds: &[&[&[u8]]] = &[&[
+        let seeds: &[&[&[u8]]] = &[&[
             b"collection_authority",
             &self.collection.key().to_bytes(),
             &[self.collection_authority.bump],
         ]];
 
-        // Update the FreezeDelegate plugin to set frozen = false (THAW!)
         UpdatePluginV1CpiBuilder::new(&self.core_program.to_account_info())
             .asset(&self.asset.to_account_info())
             .collection(Some(&self.collection.to_account_info()))
             .authority(Some(&self.collection_authority.to_account_info()))
-            .payer(&self.authority.to_account_info())
-            .plugin(Plugin::FreezeDelegate(FreezeDelegate { frozen: false })) // <-- KEY DIFFERENCE!
+            .payer(&self.payer.to_account_info())
             .system_program(&self.system_program.to_account_info())
-            .invoke_signed(signer_seeds)?;
-
+            .plugin(Plugin::FreezeDelegate(FreezeDelegate { frozen: false }))
+            .invoke_signed(seeds)?;
         Ok(())
     }
 }

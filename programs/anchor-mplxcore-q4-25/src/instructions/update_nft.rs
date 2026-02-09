@@ -1,5 +1,3 @@
-// TODO
-
 use anchor_lang::prelude::*;
 use mpl_core::{
     instructions::UpdateV1CpiBuilder,
@@ -44,6 +42,8 @@ pub struct UpdateNft<'info> {
 }
 
 impl<'info> UpdateNft<'info> {
+    //Here we are basically updating the name of the nft. 
+    //And the collection authority pda is our signer.
     pub fn update_nft(&mut self, new_name: String) -> Result<()> {
         // Create signer seeds for the collection authority PDA
         let signer_seeds: &[&[&[u8]]] = &[&[
